@@ -2,7 +2,6 @@ class LSystem {
   constructor(axiom, rules) {
     this._axiom = axiom;
     this._rules = this._parseRules(rules);
-    this._current = axiom;
   }
 
   _parseRules(rulesString) {
@@ -18,16 +17,49 @@ class LSystem {
     return rules;
   }
 
-  generate(iterations) {
-    this._current = this._axiom;
-    for (let i = 0; i < iterations; i++) {
-      let next = '';
-      for (let char of this._current) {
-        next += this._rules[char] || char;
+  generateAndDraw(iterations, turtle, angle, length) {
+    turtle.beginLine();
+    // Stack entries are [string, remainingIterations]
+    const stack = [[this._axiom, iterations]];
+
+    while (stack.length > 0) {
+      const [current, remainingIterations] = stack.pop();
+
+      if (remainingIterations === 0) {
+        // Draw the current character
+        for (let char of current) {
+          switch (char) {
+            case 'F':
+              turtle.forward(length);
+              break;
+            case '+':
+              turtle.rotate(angle);
+              break;
+            case '-':
+              turtle.rotate(-angle);
+              break;
+            case '[':
+              turtle.push();
+              break;
+            case ']':
+              turtle.pop();
+              break;
+          }
+        }
+      } else {
+        // Push characters in reverse order to maintain correct drawing order
+        for (let i = current.length - 1; i >= 0; i--) {
+          const char = current[i];
+          const replacement = this._rules[char];
+          if (replacement) {
+            stack.push([replacement, remainingIterations - 1]);
+          } else {
+            stack.push([char, 0]); // Draw this character immediately
+          }
+        }
       }
-      this._current = next;
     }
-    return this._current;
+    turtle.endLine();
   }
 }
 
@@ -45,14 +77,20 @@ class Turtle {
     this._stack = [];
   }
 
+  beginLine() {
+    this._ctx.beginPath();
+    this._ctx.moveTo(this._x, this._y);
+  }
+
+  endLine() {
+    this._ctx.stroke();
+  }
+
   forward(length) {
     const newX = this._x + Math.cos(this._angle * Math.PI / 180) * length;
     const newY = this._y + Math.sin(this._angle * Math.PI / 180) * length;
 
-    this._ctx.beginPath();
-    this._ctx.moveTo(this._x, this._y);
     this._ctx.lineTo(newX, newY);
-    this._ctx.stroke();
 
     this._x = newX;
     this._y = newY;
@@ -119,32 +157,9 @@ class LSystemVisualizer {
     document.getElementById('generate').addEventListener('click', () => this.generate());
   }
 
-  _updateTimingDisplay(generationTime, drawingTime, totalTime) {
+  _updateTimingDisplay(totalTime) {
     const timingElement = document.getElementById('timing');
-    timingElement.textContent = `Generation: ${generationTime.toFixed(2)}ms | Drawing: ${drawingTime.toFixed(2)}ms | Total: ${totalTime.toFixed(2)}ms`;
-  }
-
-  _drawLSystem(instructions, angle, length) {
-    this._turtle.reset();
-    for (let char of instructions) {
-      switch (char) {
-        case 'F':
-          this._turtle.forward(length);
-          break;
-        case '+':
-          this._turtle.rotate(angle);
-          break;
-        case '-':
-          this._turtle.rotate(-angle);
-          break;
-        case '[':
-          this._turtle.push();
-          break;
-        case ']':
-          this._turtle.pop();
-          break;
-      }
-    }
+    timingElement.textContent = `Total time: ${totalTime.toFixed(2)}ms`;
   }
 
   generate() {
@@ -162,19 +177,15 @@ class LSystemVisualizer {
     this._ctx.strokeStyle = '#2c3e50';
     this._ctx.lineWidth = 1;
 
-    // Generate L-system
-    const lsystem = new LSystem(axiom, rules);
-    const generationStart = performance.now();
-    const result = lsystem.generate(iterations);
-    const generationTime = performance.now() - generationStart;
+    // Reset turtle
+    this._turtle.reset();
 
-    // Draw using turtle graphics
-    const drawingStart = performance.now();
-    this._drawLSystem(result, angle, length);
-    const drawingTime = performance.now() - drawingStart;
+    // Generate and draw L-system
+    const lsystem = new LSystem(axiom, rules);
+    lsystem.generateAndDraw(iterations, this._turtle, angle, length);
     const totalTime = performance.now() - startTime;
 
-    this._updateTimingDisplay(generationTime, drawingTime, totalTime);
+    this._updateTimingDisplay(totalTime);
   }
 }
 
