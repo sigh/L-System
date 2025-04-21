@@ -95,30 +95,38 @@ class LSystemVisualizer {
     this._canvas.height = this._canvas.offsetHeight;
   }
 
+  _setupSliderControl(sliderId, inputId) {
+    const slider = document.getElementById(sliderId);
+    const input = document.getElementById(inputId);
+
+    slider.addEventListener('input', () => {
+      input.value = slider.value;
+    });
+
+    input.addEventListener('input', () => {
+      const value = parseInt(input.value);
+      if (value >= input.min && value <= input.max) {
+        slider.value = value;
+      }
+    });
+  }
+
   _setupControls() {
+    this._setupSliderControl('iterations-slider', 'iterations');
+    this._setupSliderControl('angle-slider', 'angle');
+    this._setupSliderControl('length-slider', 'length');
+
     document.getElementById('generate').addEventListener('click', () => this.generate());
   }
 
-  generate() {
-    const axiom = document.getElementById('axiom').value;
-    const rules = document.getElementById('rules').value;
-    const iterations = parseInt(document.getElementById('iterations').value);
-    const angle = parseInt(document.getElementById('angle').value);
-    const length = parseInt(document.getElementById('length').value);
+  _updateTimingDisplay(generationTime, drawingTime, totalTime) {
+    const timingElement = document.getElementById('timing');
+    timingElement.textContent = `Generation: ${generationTime.toFixed(2)}ms | Drawing: ${drawingTime.toFixed(2)}ms | Total: ${totalTime.toFixed(2)}ms`;
+  }
 
-    // Clear canvas
-    this._ctx = this._canvas.getContext('2d');
-    this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
-    this._ctx.strokeStyle = '#2c3e50';
-    this._ctx.lineWidth = 1;
-
-    // Generate L-system
-    const lsystem = new LSystem(axiom, rules);
-    const result = lsystem.generate(iterations);
-
-    // Draw using turtle graphics
+  _drawLSystem(instructions, angle, length) {
     this._turtle.reset();
-    for (let char of result) {
+    for (let char of instructions) {
       switch (char) {
         case 'F':
           this._turtle.forward(length);
@@ -137,6 +145,36 @@ class LSystemVisualizer {
           break;
       }
     }
+  }
+
+  generate() {
+    const startTime = performance.now();
+
+    const axiom = document.getElementById('axiom').value;
+    const rules = document.getElementById('rules').value;
+    const iterations = parseInt(document.getElementById('iterations').value);
+    const angle = parseInt(document.getElementById('angle').value);
+    const length = parseInt(document.getElementById('length').value);
+
+    // Clear canvas
+    this._ctx = this._canvas.getContext('2d');
+    this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
+    this._ctx.strokeStyle = '#2c3e50';
+    this._ctx.lineWidth = 1;
+
+    // Generate L-system
+    const lsystem = new LSystem(axiom, rules);
+    const generationStart = performance.now();
+    const result = lsystem.generate(iterations);
+    const generationTime = performance.now() - generationStart;
+
+    // Draw using turtle graphics
+    const drawingStart = performance.now();
+    this._drawLSystem(result, angle, length);
+    const drawingTime = performance.now() - drawingStart;
+    const totalTime = performance.now() - startTime;
+
+    this._updateTimingDisplay(generationTime, drawingTime, totalTime);
   }
 }
 
