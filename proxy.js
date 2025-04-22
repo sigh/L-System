@@ -120,14 +120,12 @@ class VisualizerProxy {
     const rules = document.getElementById('rules').value;
     const iterations = parseInt(document.getElementById('iterations').value);
     const angle = parseInt(document.getElementById('angle').value);
-    const length = parseInt(document.getElementById('length').value);
 
     this._worker.postMessage({
       axiom,
       rules,
       iterations,
-      angle,
-      length
+      angle
     });
   }
 }

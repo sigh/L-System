@@ -23,8 +23,6 @@ class PageHandler {
     document.getElementById('iterations-slider').value = preset.iterations;
     document.getElementById('angle').value = preset.angle;
     document.getElementById('angle-slider').value = preset.angle;
-    document.getElementById('length').value = preset.length;
-    document.getElementById('length-slider').value = preset.length;
   }
 
   _findMatchingPreset(axiom, rules, angle) {
@@ -46,7 +44,6 @@ class PageHandler {
   _setupControls() {
     this._setupSliderControl('iterations-slider', 'iterations');
     this._setupSliderControl('angle-slider', 'angle');
-    this._setupSliderControl('length-slider', 'length');
 
     document.getElementById('generate').addEventListener('click', () => {
       this._updateUrl();
@@ -73,7 +70,7 @@ class PageHandler {
     });
 
     // Add input change handlers to update URL only
-    ['iterations', 'length'].forEach(id => {
+    ['iterations'].forEach(id => {
       document.getElementById(id).addEventListener('change', () => this._updateUrl());
     });
   }
@@ -87,12 +84,9 @@ class PageHandler {
       this._updateUrl();
     });
 
-    input.addEventListener('input', () => {
-      const value = parseInt(input.value);
-      if (value >= input.min && value <= input.max) {
-        slider.value = value;
-        this._updateUrl();
-      }
+    input.addEventListener('change', () => {
+      slider.value = input.value;
+      this._updateUrl();
     });
   }
 
@@ -102,7 +96,6 @@ class PageHandler {
     params.set('rules', document.getElementById('rules').value);
     params.set('iterations', document.getElementById('iterations').value);
     params.set('angle', document.getElementById('angle').value);
-    params.set('length', document.getElementById('length').value);
 
     const newUrl = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState({}, '', newUrl);
@@ -126,11 +119,6 @@ class PageHandler {
       const angle = params.get('angle');
       document.getElementById('angle').value = angle;
       document.getElementById('angle-slider').value = angle;
-    }
-    if (params.has('length')) {
-      const length = params.get('length');
-      document.getElementById('length').value = length;
-      document.getElementById('length-slider').value = length;
     }
 
     // Update preset field based on loaded parameters

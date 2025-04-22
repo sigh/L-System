@@ -16,7 +16,7 @@ class LSystem {
     return rules;
   }
 
-  draw(iterations, turtle, angle, length) {
+  draw(iterations, turtle, angle) {
     turtle.reset();
     const stack = [[this._axiom, iterations]];
 
@@ -27,7 +27,7 @@ class LSystem {
         for (let char of current) {
           switch (char) {
             case 'F':
-              turtle.forward(length);
+              turtle.forward(1);
               break;
             case '+':
               turtle.rotate(angle);
@@ -104,6 +104,8 @@ class Turtle {
     // Apply turtle transformations last
     this._ctx.translate(translateX, translateY);
     this._ctx.scale(this._baseScale, this._baseScale);
+    // Set line width based on zoom level
+    this._ctx.lineWidth = 1 / (this._baseScale * zoom);
     // Draw the path
     this._ctx.stroke(this._path);
     this._ctx.restore();
@@ -161,23 +163,21 @@ self.onmessage = function (e) {
     if (turtle) {
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       ctx.strokeStyle = '#2c3e50';
-      ctx.lineWidth = 1;
       turtle.draw(data.pan.x, data.pan.y, data.pan.zoom);
     }
     return;
   }
 
-  const { axiom, rules, iterations, angle, length } = data;
+  const { axiom, rules, iterations, angle } = data;
 
   const startTime = performance.now();
 
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.strokeStyle = '#2c3e50';
-  ctx.lineWidth = 1;
 
   turtle = new Turtle(ctx);
   lsystem = new LSystem(axiom, rules);
-  lsystem.draw(iterations, turtle, angle, length);
+  lsystem.draw(iterations, turtle, angle);
 
   const totalTime = performance.now() - startTime;
 
