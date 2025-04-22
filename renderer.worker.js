@@ -17,7 +17,7 @@ class LSystem {
   }
 
   draw(iterations, turtle, angle, length) {
-    turtle.beginLine();
+    turtle.reset();
     const stack = [[this._axiom, iterations]];
 
     while (stack.length > 0) {
@@ -55,7 +55,7 @@ class LSystem {
         }
       }
     }
-    turtle.endLine();
+    turtle.draw();
   }
 }
 
@@ -76,12 +76,7 @@ class Turtle {
     this._minY = Infinity;
     this._maxX = -Infinity;
     this._maxY = -Infinity;
-  }
-
-  beginLine() {
-    this._path = new Path2D();
-    this._path.moveTo(this._x, this._y);
-    this._updateBounds(this._x, this._y);
+    this._baseScale = 1;
   }
 
   _updateBounds(x, y) {
@@ -91,21 +86,25 @@ class Turtle {
     this._maxY = Math.max(this._maxY, y);
   }
 
-  endLine() {
+  draw(panX = 0, panY = 0, zoom = 1) {
     // Calculate scale to fit canvas
     const padding = 20;
     const scaleX = (this._ctx.canvas.width - 2 * padding) / (this._maxX - this._minX);
     const scaleY = (this._ctx.canvas.height - 2 * padding) / (this._maxY - this._minY);
-    const scale = Math.min(scaleX, scaleY);
+    this._baseScale = Math.min(scaleX, scaleY);
 
-    // Calculate translation to center
-    const translateX = (this._ctx.canvas.width - (this._maxX - this._minX) * scale) / 2 - this._minX * scale;
-    const translateY = (this._ctx.canvas.height - (this._maxY - this._minY) * scale) / 2 - this._minY * scale;
+    // Calculate translation to center the path after scaling
+    const translateX = (this._ctx.canvas.width / 2) - ((this._minX + this._maxX) / 2) * this._baseScale;
+    const translateY = (this._ctx.canvas.height / 2) - ((this._minY + this._maxY) / 2) * this._baseScale;
 
-    // Apply transformation
     this._ctx.save();
+    // Apply user and zoom first
+    this._ctx.translate(panX, panY);
+    this._ctx.scale(zoom, zoom);
+    // Apply turtle transformations last
     this._ctx.translate(translateX, translateY);
-    this._ctx.scale(scale, scale);
+    this._ctx.scale(this._baseScale, this._baseScale);
+    // Draw the path
     this._ctx.stroke(this._path);
     this._ctx.restore();
   }
@@ -145,6 +144,8 @@ class Turtle {
 }
 
 let ctx = null;
+let turtle = null;
+let lsystem = null;
 
 self.onmessage = function (e) {
   const data = e.data;
@@ -152,6 +153,17 @@ self.onmessage = function (e) {
   if (data.canvas) {
     // Initialize canvas
     ctx = data.canvas.getContext('2d');
+    return;
+  }
+
+  if (data.pan) {
+    // Handle panning and zooming
+    if (turtle) {
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.strokeStyle = '#2c3e50';
+      ctx.lineWidth = 1;
+      turtle.draw(data.pan.x, data.pan.y, data.pan.zoom);
+    }
     return;
   }
 
@@ -163,8 +175,8 @@ self.onmessage = function (e) {
   ctx.strokeStyle = '#2c3e50';
   ctx.lineWidth = 1;
 
-  const turtle = new Turtle(ctx);
-  const lsystem = new LSystem(axiom, rules);
+  turtle = new Turtle(ctx);
+  lsystem = new LSystem(axiom, rules);
   lsystem.draw(iterations, turtle, angle, length);
 
   const totalTime = performance.now() - startTime;
