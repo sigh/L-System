@@ -62,6 +62,7 @@ class LSystem {
 class Turtle {
   constructor(ctx) {
     this._ctx = ctx;
+    this._path = new Path2D();
     this.reset();
   }
 
@@ -70,22 +71,51 @@ class Turtle {
     this._y = this._ctx.canvas.height;
     this._angle = -90;
     this._stack = [];
+    this._path = new Path2D();
+    this._minX = Infinity;
+    this._minY = Infinity;
+    this._maxX = -Infinity;
+    this._maxY = -Infinity;
   }
 
   beginLine() {
-    this._ctx.beginPath();
-    this._ctx.moveTo(this._x, this._y);
+    this._path = new Path2D();
+    this._path.moveTo(this._x, this._y);
+    this._updateBounds(this._x, this._y);
+  }
+
+  _updateBounds(x, y) {
+    this._minX = Math.min(this._minX, x);
+    this._minY = Math.min(this._minY, y);
+    this._maxX = Math.max(this._maxX, x);
+    this._maxY = Math.max(this._maxY, y);
   }
 
   endLine() {
-    this._ctx.stroke();
+    // Calculate scale to fit canvas
+    const padding = 20;
+    const scaleX = (this._ctx.canvas.width - 2 * padding) / (this._maxX - this._minX);
+    const scaleY = (this._ctx.canvas.height - 2 * padding) / (this._maxY - this._minY);
+    const scale = Math.min(scaleX, scaleY);
+
+    // Calculate translation to center
+    const translateX = (this._ctx.canvas.width - (this._maxX - this._minX) * scale) / 2 - this._minX * scale;
+    const translateY = (this._ctx.canvas.height - (this._maxY - this._minY) * scale) / 2 - this._minY * scale;
+
+    // Apply transformation
+    this._ctx.save();
+    this._ctx.translate(translateX, translateY);
+    this._ctx.scale(scale, scale);
+    this._ctx.stroke(this._path);
+    this._ctx.restore();
   }
 
   forward(length) {
     const newX = this._x + Math.cos(this._angle * Math.PI / 180) * length;
     const newY = this._y + Math.sin(this._angle * Math.PI / 180) * length;
 
-    this._ctx.lineTo(newX, newY);
+    this._path.lineTo(newX, newY);
+    this._updateBounds(newX, newY);
 
     this._x = newX;
     this._y = newY;
