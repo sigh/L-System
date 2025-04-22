@@ -149,37 +149,38 @@ let ctx = null;
 let turtle = null;
 let lsystem = null;
 
+const methods = {
+  initCanvas(canvas) {
+    ctx = canvas.getContext('2d');
+  },
+
+  generate({ axiom, rules, iterations, angle }) {
+    const startTime = performance.now();
+
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.strokeStyle = '#2c3e50';
+
+    turtle = new Turtle(ctx);
+    lsystem = new LSystem(axiom, rules);
+    lsystem.draw(iterations, turtle, angle);
+
+    const totalTime = performance.now() - startTime;
+    return { totalTime };
+  },
+
+  updateView({ panX, panY, zoom }) {
+    if (!turtle) return;
+
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.strokeStyle = '#2c3e50';
+    turtle.draw(panX, panY, zoom);
+  }
+};
+
 self.onmessage = function (e) {
-  const data = e.data;
-
-  if (data.canvas) {
-    // Initialize canvas
-    ctx = data.canvas.getContext('2d');
-    return;
+  const { method, params } = e.data;
+  const result = methods[method](params);
+  if (result) {
+    self.postMessage(result);
   }
-
-  if (data.pan) {
-    // Handle panning and zooming
-    if (turtle) {
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      ctx.strokeStyle = '#2c3e50';
-      turtle.draw(data.pan.x, data.pan.y, data.pan.zoom);
-    }
-    return;
-  }
-
-  const { axiom, rules, iterations, angle } = data;
-
-  const startTime = performance.now();
-
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  ctx.strokeStyle = '#2c3e50';
-
-  turtle = new Turtle(ctx);
-  lsystem = new LSystem(axiom, rules);
-  lsystem.draw(iterations, turtle, angle);
-
-  const totalTime = performance.now() - startTime;
-
-  self.postMessage({ totalTime });
 };

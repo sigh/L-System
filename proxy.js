@@ -12,11 +12,19 @@ class VisualizerProxy {
 
     // Create OffscreenCanvas once
     this._offscreen = this._canvas.transferControlToOffscreen();
-    this._worker.postMessage({ canvas: this._offscreen }, [this._offscreen]);
+    this._worker.postMessage({
+      method: 'initCanvas',
+      params: this._offscreen
+    }, [this._offscreen]);
 
     // Add mouse panning and zooming
     this._resetPanState();
     this._setupPanning();
+
+    // Initialize deferred render function
+    this._deferredRender = deferUntilAnimationFrame((message) => {
+      this._worker.postMessage(message);
+    });
   }
 
   _resetPanState() {
@@ -46,8 +54,13 @@ class VisualizerProxy {
       this._panX += dx;
       this._panY += dy;
 
-      this._worker.postMessage({
-        pan: { x: this._panX, y: this._panY, zoom: this._zoom }
+      this._deferredRender({
+        method: 'updateView',
+        params: {
+          panX: this._panX,
+          panY: this._panY,
+          zoom: this._zoom
+        }
       });
 
       lastX = e.clientX;
@@ -92,8 +105,13 @@ class VisualizerProxy {
         this._panX = mouseX - originalX * this._zoom;
         this._panY = mouseY - originalY * this._zoom;
 
-        this._worker.postMessage({
-          pan: { x: this._panX, y: this._panY, zoom: this._zoom }
+        this._deferredRender({
+          method: 'updateView',
+          params: {
+            panX: this._panX,
+            panY: this._panY,
+            zoom: this._zoom
+          }
         });
       }
     });
@@ -122,10 +140,13 @@ class VisualizerProxy {
     const angle = parseInt(document.getElementById('angle').value);
 
     this._worker.postMessage({
-      axiom,
-      rules,
-      iterations,
-      angle
+      method: 'generate',
+      params: {
+        axiom,
+        rules,
+        iterations,
+        angle
+      }
     });
   }
 }
