@@ -16,7 +16,7 @@ class LSystem {
     return rules;
   }
 
-  generateAndDraw(iterations, turtle, angle, length) {
+  draw(iterations, turtle, angle, length) {
     turtle.beginLine();
     const stack = [[this._axiom, iterations]];
 
@@ -139,6 +139,7 @@ class Turtle {
       this._x = state.x;
       this._y = state.y;
       this._angle = state.angle;
+      this._path.moveTo(this._x, this._y);
     }
   }
 }
@@ -164,7 +165,7 @@ self.onmessage = function (e) {
 
   const turtle = new Turtle(ctx);
   const lsystem = new LSystem(axiom, rules);
-  lsystem.generateAndDraw(iterations, turtle, angle, length);
+  lsystem.draw(iterations, turtle, angle, length);
 
   const totalTime = performance.now() - startTime;
 
