@@ -130,9 +130,11 @@ class VisualizerProxy {
     timingElement.textContent = `Total time: ${totalTime.toFixed(2)}ms`;
   }
 
-  generate() {
+  generate(resetPan = true) {
     // Reset pan state when generating new L-system
-    this._resetPanState();
+    if (resetPan) {
+      this._resetPanState();
+    }
 
     const axiom = document.getElementById('axiom').value;
     const rules = document.getElementById('rules').value;
@@ -145,7 +147,10 @@ class VisualizerProxy {
         axiom,
         rules,
         iterations,
-        angle
+        angle,
+        panX: this._panX,
+        panY: this._panY,
+        zoom: this._zoom
       }
     });
   }

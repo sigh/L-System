@@ -48,7 +48,7 @@ class PageHandler {
     document.getElementById('generate').addEventListener('click', () => {
       this._updateUrl();
       this._updatePresetField();
-      this._visualizer.generate();
+      this._visualizer.generate(true);
     });
 
     // Add preset selection handler
@@ -57,7 +57,7 @@ class PageHandler {
       if (preset) {
         this._updateControlsFromPreset(preset);
         this._updateUrl();
-        this._visualizer.generate();
+        this._visualizer.generate(true);
       }
     });
 
@@ -69,9 +69,12 @@ class PageHandler {
       });
     });
 
-    // Add input change handlers to update URL only
-    ['iterations'].forEach(id => {
-      document.getElementById(id).addEventListener('change', () => this._updateUrl());
+    // Add input change handlers to update URL and regenerate without resetting pan
+    ['iterations', 'angle'].forEach(id => {
+      document.getElementById(id).addEventListener('change', () => {
+        this._updateUrl();
+        this._visualizer.generate(false);
+      });
     });
   }
 
@@ -82,11 +85,13 @@ class PageHandler {
     slider.addEventListener('input', () => {
       input.value = slider.value;
       this._updateUrl();
+      this._visualizer.generate(false);
     });
 
     input.addEventListener('change', () => {
       slider.value = input.value;
       this._updateUrl();
+      this._visualizer.generate(false);
     });
   }
 
@@ -126,7 +131,7 @@ class PageHandler {
 
     // If we loaded parameters from URL, generate the L-system
     if (params.toString()) {
-      this._visualizer.generate();
+      this._visualizer.generate(true);
     }
   }
 }

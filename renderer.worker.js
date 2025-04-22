@@ -16,8 +16,7 @@ class LSystem {
     return rules;
   }
 
-  draw(iterations, turtle, angle) {
-    turtle.reset();
+  run(turtle, angle, iterations) {
     const stack = [[this._axiom, iterations]];
 
     while (stack.length > 0) {
@@ -55,7 +54,6 @@ class LSystem {
         }
       }
     }
-    turtle.draw();
   }
 }
 
@@ -98,7 +96,7 @@ class Turtle {
     const translateY = (this._ctx.canvas.height / 2) - ((this._minY + this._maxY) / 2) * this._baseScale;
 
     this._ctx.save();
-    // Apply user and zoom first
+    // Apply user pan and zoom first
     this._ctx.translate(panX, panY);
     this._ctx.scale(zoom, zoom);
     // Apply turtle transformations last
@@ -154,7 +152,7 @@ const methods = {
     ctx = canvas.getContext('2d');
   },
 
-  generate({ axiom, rules, iterations, angle }) {
+  generate({ axiom, rules, iterations, angle, panX = 0, panY = 0, zoom = 1 }) {
     const startTime = performance.now();
 
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -162,7 +160,8 @@ const methods = {
 
     turtle = new Turtle(ctx);
     lsystem = new LSystem(axiom, rules);
-    lsystem.draw(iterations, turtle, angle);
+    lsystem.run(turtle, angle, iterations);
+    turtle.draw(panX, panY, zoom);
 
     const totalTime = performance.now() - startTime;
     return { totalTime };
