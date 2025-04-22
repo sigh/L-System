@@ -1,16 +1,12 @@
 class PageHandler {
   constructor() {
-    this._visualizer = new Proxy();
+    this._visualizer = new VisualizerProxy();
     this._setupPresets();
     this._setupControls();
+    this._loadFromUrl();
   }
 
   _setupPresets() {
-    this._populatePresets();
-    this._setInitialPreset();
-  }
-
-  _populatePresets() {
     const presetSelect = document.getElementById('preset');
     Object.entries(LSystemPresets).forEach(([key, preset]) => {
       const option = document.createElement('option');
@@ -18,14 +14,6 @@ class PageHandler {
       option.textContent = preset.name;
       presetSelect.appendChild(option);
     });
-  }
-
-  _setInitialPreset() {
-    const firstPreset = Object.values(LSystemPresets)[0];
-    if (firstPreset) {
-      this._updateControlsFromPreset(firstPreset);
-      this._visualizer.generate();
-    }
   }
 
   _updateControlsFromPreset(preset) {
@@ -39,20 +27,54 @@ class PageHandler {
     document.getElementById('length-slider').value = preset.length;
   }
 
+  _findMatchingPreset(axiom, rules, angle) {
+    return Object.entries(LSystemPresets).find(([_, preset]) =>
+      preset.axiom === axiom &&
+      preset.rules === rules &&
+      Math.abs(preset.angle - parseFloat(angle)) < 0.001
+    )?.[0] || '';
+  }
+
+  _updatePresetField() {
+    const axiom = document.getElementById('axiom').value;
+    const rules = document.getElementById('rules').value;
+    const angle = document.getElementById('angle').value;
+    const matchingPreset = this._findMatchingPreset(axiom, rules, angle);
+    document.getElementById('preset').value = matchingPreset;
+  }
+
   _setupControls() {
     this._setupSliderControl('iterations-slider', 'iterations');
     this._setupSliderControl('angle-slider', 'angle');
     this._setupSliderControl('length-slider', 'length');
 
-    document.getElementById('generate').addEventListener('click', () => this._visualizer.generate());
+    document.getElementById('generate').addEventListener('click', () => {
+      this._updateUrl();
+      this._updatePresetField();
+      this._visualizer.generate();
+    });
 
     // Add preset selection handler
     document.getElementById('preset').addEventListener('change', (e) => {
       const preset = LSystemPresets[e.target.value];
       if (preset) {
         this._updateControlsFromPreset(preset);
+        this._updateUrl();
         this._visualizer.generate();
       }
+    });
+
+    // Add input change handlers to update URL and preset field
+    ['axiom', 'rules', 'angle'].forEach(id => {
+      document.getElementById(id).addEventListener('change', () => {
+        this._updateUrl();
+        this._updatePresetField();
+      });
+    });
+
+    // Add input change handlers to update URL only
+    ['iterations', 'length'].forEach(id => {
+      document.getElementById(id).addEventListener('change', () => this._updateUrl());
     });
   }
 
@@ -62,14 +84,62 @@ class PageHandler {
 
     slider.addEventListener('input', () => {
       input.value = slider.value;
+      this._updateUrl();
     });
 
     input.addEventListener('input', () => {
       const value = parseInt(input.value);
       if (value >= input.min && value <= input.max) {
         slider.value = value;
+        this._updateUrl();
       }
     });
+  }
+
+  _updateUrl() {
+    const params = new URLSearchParams();
+    params.set('axiom', document.getElementById('axiom').value);
+    params.set('rules', document.getElementById('rules').value);
+    params.set('iterations', document.getElementById('iterations').value);
+    params.set('angle', document.getElementById('angle').value);
+    params.set('length', document.getElementById('length').value);
+
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+  }
+
+  _loadFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.has('axiom')) {
+      document.getElementById('axiom').value = params.get('axiom');
+    }
+    if (params.has('rules')) {
+      document.getElementById('rules').value = params.get('rules');
+    }
+    if (params.has('iterations')) {
+      const iterations = params.get('iterations');
+      document.getElementById('iterations').value = iterations;
+      document.getElementById('iterations-slider').value = iterations;
+    }
+    if (params.has('angle')) {
+      const angle = params.get('angle');
+      document.getElementById('angle').value = angle;
+      document.getElementById('angle-slider').value = angle;
+    }
+    if (params.has('length')) {
+      const length = params.get('length');
+      document.getElementById('length').value = length;
+      document.getElementById('length-slider').value = length;
+    }
+
+    // Update preset field based on loaded parameters
+    this._updatePresetField();
+
+    // If we loaded parameters from URL, generate the L-system
+    if (params.toString()) {
+      this._visualizer.generate();
+    }
   }
 }
 
