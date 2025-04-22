@@ -6,7 +6,6 @@ class LSystem {
 
   _parseRules(rulesString) {
     const rules = {};
-    // Split by both semicolons and line breaks
     const rulePairs = rulesString.split(/[;\n]/).filter(pair => pair.trim() !== '');
     rulePairs.forEach(pair => {
       const [key, value] = pair.split('=');
@@ -19,14 +18,12 @@ class LSystem {
 
   generateAndDraw(iterations, turtle, angle, length) {
     turtle.beginLine();
-    // Stack entries are [string, remainingIterations]
     const stack = [[this._axiom, iterations]];
 
     while (stack.length > 0) {
       const [current, remainingIterations] = stack.pop();
 
       if (remainingIterations === 0) {
-        // Draw the current character
         for (let char of current) {
           switch (char) {
             case 'F':
@@ -47,14 +44,13 @@ class LSystem {
           }
         }
       } else {
-        // Push characters in reverse order to maintain correct drawing order
         for (let i = current.length - 1; i >= 0; i--) {
           const char = current[i];
           const replacement = this._rules[char];
           if (replacement) {
             stack.push([replacement, remainingIterations - 1]);
           } else {
-            stack.push([char, 0]); // Draw this character immediately
+            stack.push([char, 0]);
           }
         }
       }
@@ -64,16 +60,15 @@ class LSystem {
 }
 
 class Turtle {
-  constructor(canvas) {
-    this._canvas = canvas;
-    this._ctx = canvas.getContext('2d');
+  constructor(ctx) {
+    this._ctx = ctx;
     this.reset();
   }
 
   reset() {
-    this._x = this._canvas.width / 2;
-    this._y = this._canvas.height;
-    this._angle = -90; // Start pointing up
+    this._x = this._ctx.canvas.width / 2;
+    this._y = this._ctx.canvas.height;
+    this._angle = -90;
     this._stack = [];
   }
 
@@ -118,48 +113,30 @@ class Turtle {
   }
 }
 
-class LSystemVisualizer {
-  constructor() {
-    this._canvas = document.getElementById('canvas');
-    this._resizeCanvas();
-    window.addEventListener('resize', () => this._resizeCanvas());
+let ctx = null;
 
-    this._turtle = new Turtle(this._canvas);
+self.onmessage = function (e) {
+  const data = e.data;
+
+  if (data.canvas) {
+    // Initialize canvas
+    ctx = data.canvas.getContext('2d');
+    return;
   }
 
-  _resizeCanvas() {
-    this._canvas.width = this._canvas.offsetWidth;
-    this._canvas.height = this._canvas.offsetHeight;
-  }
+  const { axiom, rules, iterations, angle, length } = data;
 
-  _updateTimingDisplay(totalTime) {
-    const timingElement = document.getElementById('timing');
-    timingElement.textContent = `Total time: ${totalTime.toFixed(2)}ms`;
-  }
+  const startTime = performance.now();
 
-  generate() {
-    const startTime = performance.now();
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.strokeStyle = '#2c3e50';
+  ctx.lineWidth = 1;
 
-    const axiom = document.getElementById('axiom').value;
-    const rules = document.getElementById('rules').value;
-    const iterations = parseInt(document.getElementById('iterations').value);
-    const angle = parseInt(document.getElementById('angle').value);
-    const length = parseInt(document.getElementById('length').value);
+  const turtle = new Turtle(ctx);
+  const lsystem = new LSystem(axiom, rules);
+  lsystem.generateAndDraw(iterations, turtle, angle, length);
 
-    // Clear canvas
-    this._ctx = this._canvas.getContext('2d');
-    this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
-    this._ctx.strokeStyle = '#2c3e50';
-    this._ctx.lineWidth = 1;
+  const totalTime = performance.now() - startTime;
 
-    // Reset turtle
-    this._turtle.reset();
-
-    // Generate and draw L-system
-    const lsystem = new LSystem(axiom, rules);
-    lsystem.generateAndDraw(iterations, this._turtle, angle, length);
-    const totalTime = performance.now() - startTime;
-
-    this._updateTimingDisplay(totalTime);
-  }
-}
+  self.postMessage({ totalTime });
+};
