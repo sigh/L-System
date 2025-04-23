@@ -148,8 +148,19 @@ let turtle = null;
 let lsystem = null;
 
 const methods = {
-  initCanvas(canvas) {
+  initCanvas({ canvas }) {
     ctx = canvas.getContext('2d');
+  },
+
+  resize({ width, height, panX = 0, panY = 0, zoom = 1 }) {
+    ctx.canvas.width = parseInt(width);
+    ctx.canvas.height = parseInt(height);
+    // Redraw if we have a turtle
+    if (turtle) {
+      ctx.clearRect(0, 0, width, height);
+      ctx.strokeStyle = '#2c3e50';
+      turtle.draw(panX, panY, zoom);
+    }
   },
 
   generate({ axiom, rules, iterations, angle, panX = 0, panY = 0, zoom = 1 }) {

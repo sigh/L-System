@@ -1,8 +1,6 @@
 class VisualizerProxy {
   constructor() {
     this._canvas = document.getElementById('canvas');
-    this._resizeCanvas();
-    window.addEventListener('resize', () => this._resizeCanvas());
 
     this._worker = new Worker('js/renderer.worker.js');
     this._worker.onmessage = (e) => {
@@ -14,8 +12,12 @@ class VisualizerProxy {
     this._offscreen = this._canvas.transferControlToOffscreen();
     this._worker.postMessage({
       method: 'initCanvas',
-      params: this._offscreen
+      params: { canvas: this._offscreen },
     }, [this._offscreen]);
+
+    // Initial resize after worker is set up
+    window.addEventListener('resize', () => this._resizeCanvas());
+    this._resizeCanvas();
 
     // Add mouse panning and zooming
     this._resetPanState();
@@ -121,8 +123,18 @@ class VisualizerProxy {
   }
 
   _resizeCanvas() {
-    this._canvas.width = this._canvas.offsetWidth;
-    this._canvas.height = this._canvas.offsetHeight;
+    const width = this._canvas.offsetWidth;
+    const height = this._canvas.offsetHeight;
+    this._worker.postMessage({
+      method: 'resize',
+      params: {
+        width,
+        height,
+        panX: this._panX,
+        panY: this._panY,
+        zoom: this._zoom
+      }
+    });
   }
 
   _updateTimingDisplay(totalTime) {
