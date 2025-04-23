@@ -4,7 +4,7 @@ class VisualizerProxy {
     this._resizeCanvas();
     window.addEventListener('resize', () => this._resizeCanvas());
 
-    this._worker = new Worker('renderer.worker.js');
+    this._worker = new Worker('js/renderer.worker.js');
     this._worker.onmessage = (e) => {
       const { totalTime } = e.data;
       this._updateTimingDisplay(totalTime);
