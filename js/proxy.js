@@ -1,11 +1,23 @@
-class VisualizerProxy {
+class PanState {
   constructor() {
-    this._canvas = document.getElementById('canvas');
+    this.reset();
+  }
+
+  reset() {
+    this.panX = 0;
+    this.panY = 0;
+    this.zoom = 1;
+  }
+}
+
+class VisualizerProxy {
+  constructor(canvas, onWorkerMessage) {
+    this._canvas = canvas;
+    this._onWorkerMessage = onWorkerMessage;
 
     this._worker = new Worker('js/renderer.worker.js');
     this._worker.onmessage = (e) => {
-      const { totalTime } = e.data;
-      this._updateTimingDisplay(totalTime);
+      this._onWorkerMessage(e.data);
     };
 
     // Create OffscreenCanvas once
@@ -15,24 +27,20 @@ class VisualizerProxy {
       params: { canvas: this._offscreen },
     }, [this._offscreen]);
 
+    // Initialize pan state
+    this._panState = new PanState();
+
     // Initial resize after worker is set up
     window.addEventListener('resize', () => this._resizeCanvas());
     this._resizeCanvas();
 
     // Add mouse panning and zooming
-    this._resetPanState();
     this._setupPanning();
 
     // Initialize deferred render function
     this._deferredRender = deferUntilAnimationFrame((message) => {
       this._worker.postMessage(message);
     });
-  }
-
-  _resetPanState() {
-    this._panX = 0;
-    this._panY = 0;
-    this._zoom = 1;
   }
 
   _setupPanning() {
@@ -53,16 +61,12 @@ class VisualizerProxy {
       const dx = e.clientX - lastX;
       const dy = e.clientY - lastY;
 
-      this._panX += dx;
-      this._panY += dy;
+      this._panState.panX += dx;
+      this._panState.panY += dy;
 
       this._deferredRender({
         method: 'updateView',
-        params: {
-          panX: this._panX,
-          panY: this._panY,
-          zoom: this._zoom
-        }
+        params: { panState: this._panState }
       });
 
       lastX = e.clientX;
@@ -92,28 +96,24 @@ class VisualizerProxy {
       const mouseY = e.clientY - rect.top;
 
       // Calculate new zoom
-      const newZoom = this._zoom * zoomFactor;
+      const newZoom = this._panState.zoom * zoomFactor;
 
       // Limit zoom range
       if (newZoom >= 0.1 && newZoom <= 10) {
         // Calculate the point in the original coordinate system
-        const originalX = (mouseX - this._panX) / this._zoom;
-        const originalY = (mouseY - this._panY) / this._zoom;
+        const originalX = (mouseX - this._panState.panX) / this._panState.zoom;
+        const originalY = (mouseY - this._panState.panY) / this._panState.zoom;
 
         // Update zoom
-        this._zoom = newZoom;
+        this._panState.zoom = newZoom;
 
         // Calculate new pan to keep the point under the mouse
-        this._panX = mouseX - originalX * this._zoom;
-        this._panY = mouseY - originalY * this._zoom;
+        this._panState.panX = mouseX - originalX * this._panState.zoom;
+        this._panState.panY = mouseY - originalY * this._panState.zoom;
 
         this._deferredRender({
           method: 'updateView',
-          params: {
-            panX: this._panX,
-            panY: this._panY,
-            zoom: this._zoom
-          }
+          params: { panState: this._panState }
         });
       }
     });
@@ -130,28 +130,16 @@ class VisualizerProxy {
       params: {
         width,
         height,
-        panX: this._panX,
-        panY: this._panY,
-        zoom: this._zoom
+        panState: this._panState
       }
     });
   }
 
-  _updateTimingDisplay(totalTime) {
-    const timingElement = document.getElementById('timing');
-    timingElement.textContent = `Total time: ${totalTime.toFixed(2)}ms`;
-  }
-
-  generate(resetPan = true) {
+  generate({ axiom, rules, iterations, angle }, resetPan = true) {
     // Reset pan state when generating new L-system
     if (resetPan) {
-      this._resetPanState();
+      this._panState.reset();
     }
-
-    const axiom = document.getElementById('axiom').value;
-    const rules = document.getElementById('rules').value;
-    const iterations = parseInt(document.getElementById('iterations').value);
-    const angle = parseInt(document.getElementById('angle').value);
 
     this._worker.postMessage({
       method: 'generate',
@@ -160,9 +148,7 @@ class VisualizerProxy {
         rules,
         iterations,
         angle,
-        panX: this._panX,
-        panY: this._panY,
-        zoom: this._zoom
+        panState: this._panState
       }
     });
   }

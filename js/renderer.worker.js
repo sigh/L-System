@@ -84,7 +84,7 @@ class Turtle {
     this._maxY = Math.max(this._maxY, y);
   }
 
-  draw(panX = 0, panY = 0, zoom = 1) {
+  draw({ panX = 0, panY = 0, zoom = 1 }) {
     // Calculate scale to fit canvas
     const padding = 20;
     const scaleX = (this._ctx.canvas.width - 2 * padding) / (this._maxX - this._minX);
@@ -152,18 +152,18 @@ const methods = {
     ctx = canvas.getContext('2d');
   },
 
-  resize({ width, height, panX = 0, panY = 0, zoom = 1 }) {
+  resize({ width, height, panState }) {
     ctx.canvas.width = parseInt(width);
     ctx.canvas.height = parseInt(height);
     // Redraw if we have a turtle
     if (turtle) {
       ctx.clearRect(0, 0, width, height);
       ctx.strokeStyle = '#2c3e50';
-      turtle.draw(panX, panY, zoom);
+      turtle.draw(panState);
     }
   },
 
-  generate({ axiom, rules, iterations, angle, panX = 0, panY = 0, zoom = 1 }) {
+  generate({ axiom, rules, iterations, angle, panState }) {
     const startTime = performance.now();
 
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -172,18 +172,18 @@ const methods = {
     turtle = new Turtle(ctx);
     lsystem = new LSystem(axiom, rules);
     lsystem.run(turtle, angle, iterations);
-    turtle.draw(panX, panY, zoom);
+    turtle.draw(panState);
 
     const totalTime = performance.now() - startTime;
     return { totalTime };
   },
 
-  updateView({ panX, panY, zoom }) {
+  updateView({ panState }) {
     if (!turtle) return;
 
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.strokeStyle = '#2c3e50';
-    turtle.draw(panX, panY, zoom);
+    turtle.draw(panState);
   }
 };
 
