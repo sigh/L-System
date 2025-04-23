@@ -12,7 +12,7 @@ class PageHandler {
   _handleWorkerMessage(data) {
     if (data.totalTime !== undefined) {
       const timingElement = document.getElementById('timing');
-      timingElement.textContent = `Total time: ${data.totalTime.toFixed(2)}ms`;
+      timingElement.textContent = `Rendered in: ${Math.round(data.totalTime)} ms`;
     }
   }
 
@@ -21,7 +21,7 @@ class PageHandler {
       axiom: document.getElementById('axiom').value,
       rules: document.getElementById('rules').value,
       iterations: parseInt(document.getElementById('iterations').value),
-      angle: parseInt(document.getElementById('angle').value)
+      angle: parseFloat(document.getElementById('angle').value)
     };
   }
 
@@ -125,16 +125,18 @@ class PageHandler {
 
   _loadFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    if (params.has('axiom')) {
-      document.getElementById('axiom').value = params.get('axiom');
-      document.getElementById('rules').value = params.get('rules');
+    document.getElementById('axiom').value = params.get('axiom');
+    document.getElementById('rules').value = params.get('rules');
+    if (params.get('iterations')) {
       document.getElementById('iterations').value = params.get('iterations');
       document.getElementById('iterations-slider').value = params.get('iterations');
+    }
+    if (params.get('angle')) {
       document.getElementById('angle').value = params.get('angle');
       document.getElementById('angle-slider').value = params.get('angle');
-      this._updatePresetField();
-      this._visualizer.generate(this._getLSystemParams(), /* resetPan = */ true);
     }
+    this._updatePresetField();
+    this._visualizer.generate(this._getLSystemParams(), /* resetPan = */ true);
   }
 }
 

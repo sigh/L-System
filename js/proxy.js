@@ -30,8 +30,11 @@ class VisualizerProxy {
     // Initialize pan state
     this._panState = new PanState();
 
-    // Initial resize after worker is set up
-    window.addEventListener('resize', () => this._resizeCanvas());
+    // Set up resize observer
+    this._resizeObserver = new ResizeObserver(() => this._resizeCanvas());
+    this._resizeObserver.observe(this._canvas);
+
+    // Initial resize
     this._resizeCanvas();
 
     // Add mouse panning and zooming

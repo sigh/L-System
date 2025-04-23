@@ -6,11 +6,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>L-System Visualizer</title>
   <link rel="stylesheet" href="css/styles.css">
+  <script defer src="js/util.js"></script>
+  <script defer src="js/presets.js"></script>
+  <script defer src="js/proxy.js"></script>
+  <script defer src="js/page.js"></script>
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-2SQH4BL89R"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-2SQH4BL89R');
+  </script>
 </head>
 
 <body>
   <div class="container">
     <div class="controls">
+      <h1>L-System Visualizer</h1>
       <div class="control-group">
         <label for="preset">Preset:</label>
         <select id="preset">
@@ -40,13 +53,14 @@
         </div>
       </div>
       <div id="timing" class="timing-display"></div>
+      <div class="footer-links">
+        <p>Code at <a href="https://github.com/sigh/L-System" target="_blank"
+            rel="noopener">github.com/sigh/L-System</a></p>
+        <p>More projects at <a href="https://sigh.github.io/" target="_blank" rel="noopener">sigh.github.io</a></p>
+      </div>
     </div>
     <canvas id="canvas"></canvas>
   </div>
-  <script src="js/util.js"></script>
-  <script src="js/presets.js"></script>
-  <script src="js/proxy.js"></script>
-  <script src="js/page.js"></script>
 </body>
 
 </html>
