@@ -26,7 +26,10 @@ class LSystem {
         for (let char of current) {
           switch (char) {
             case 'F':
-              turtle.forward(1);
+              turtle.forward(1, true);
+              break;
+            case 'f':
+              turtle.forward(1, false);
               break;
             case '+':
               turtle.rotate(angle);
@@ -109,11 +112,15 @@ class Turtle {
     this._ctx.restore();
   }
 
-  forward(length) {
+  forward(length, draw = true) {
     const newX = this._x + Math.cos(this._angle * Math.PI / 180) * length;
     const newY = this._y + Math.sin(this._angle * Math.PI / 180) * length;
 
-    this._path.lineTo(newX, newY);
+    if (draw) {
+      this._path.lineTo(newX, newY);
+    } else {
+      this._path.moveTo(newX, newY);
+    }
     this._updateBounds(newX, newY);
 
     this._x = newX;
