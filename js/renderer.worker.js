@@ -63,21 +63,21 @@ class LSystem {
 class Turtle {
   constructor(ctx) {
     this._ctx = ctx;
-    this._path = new Path2D();
     this.reset();
   }
 
   reset() {
-    this._x = this._ctx.canvas.width / 2;
-    this._y = this._ctx.canvas.height;
+    this._x = 0;
+    this._y = 0;
     this._angle = -90;
     this._stack = [];
-    this._path = new Path2D();
-    this._minX = Infinity;
-    this._minY = Infinity;
-    this._maxX = -Infinity;
-    this._maxY = -Infinity;
+    this._minX = -.1;
+    this._minY = -.1;
+    this._maxX = .1;
+    this._maxY = .1;
     this._baseScale = 1;
+    this._path = new Path2D();
+    this._path.moveTo(this._x, this._y);
   }
 
   _updateBounds(x, y) {

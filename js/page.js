@@ -135,8 +135,17 @@ class PageHandler {
       document.getElementById('angle').value = params.get('angle');
       document.getElementById('angle-slider').value = params.get('angle');
     }
-    this._updatePresetField();
-    this._visualizer.generate(this._getLSystemParams(), /* resetPan = */ true);
+
+    if (params.get('axiom')) {
+      this._updatePresetField();
+      this._visualizer.generate(this._getLSystemParams(), /* resetPan = */ true);
+    } else {
+      // Use the first preset if no URL parameters
+      const firstPreset = Object.values(LSystemPresets)[0];
+      this._updateControlsFromPreset(firstPreset);
+      this._updateUrl();
+      this._visualizer.generate(this._getLSystemParams(), /* resetPan = */ true);
+    }
   }
 }
 
