@@ -101,7 +101,7 @@ class Canvas {
       const newZoom = this._panState.zoom * zoomFactor;
 
       // Limit zoom range
-      if (newZoom >= 0.1 && newZoom <= 10) {
+      if (newZoom >= 0.1 && newZoom <= 1e6) {
         // Calculate the point in the original coordinate system
         const originalX = (mouseX - this._panState.panX) / this._panState.zoom;
         const originalY = (mouseY - this._panState.panY) / this._panState.zoom;
