@@ -150,68 +150,106 @@ class Turtle {
   }
 }
 
-let ctx = null;
-let turtle = null;
-let lsystem = null;
+class Renderer {
+  constructor() {
+    this.ctx = null;
+    this.turtle = null;
+    this.lsystem = null;
+  }
 
-const methods = {
-  initCanvas({ canvas }) {
-    ctx = canvas.getContext('2d');
-  },
+  initCanvas(canvas) {
+    this.ctx = canvas.getContext('2d');
+  }
 
-  resize({ width, height, panState }) {
-    ctx.canvas.width = parseInt(width);
-    ctx.canvas.height = parseInt(height);
-    // Redraw if we have a turtle
-    if (turtle) {
-      ctx.clearRect(0, 0, width, height);
-      ctx.strokeStyle = '#2c3e50';
-      turtle.draw(panState);
-    }
-  },
+  resize(width, height) {
+    this.ctx.canvas.width = parseInt(width);
+    this.ctx.canvas.height = parseInt(height);
+  }
 
-  generate({ axiom, rules, iterations, angle, panState }) {
-    const ruleset = { axiom, rules, iterations, angle };
-
+  generate(axiom, rules, iterations, angle, panState) {
     // Send generation start message
     self.postMessage({
       status: 'generating',
-      ruleset
+      ruleset: { axiom, rules, iterations, angle }
     });
 
     const startTime = performance.now();
 
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.strokeStyle = '#2c3e50';
+    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+    this.ctx.strokeStyle = '#2c3e50';
 
-    turtle = new Turtle(ctx);
-    lsystem = new LSystem(axiom, rules);
-    lsystem.run(turtle, angle, iterations);
-    turtle.draw(panState);
+    this.turtle = new Turtle(this.ctx);
+    this.lsystem = new LSystem(axiom, rules);
+    this.lsystem.run(this.turtle, angle, iterations);
+    this.turtle.draw(panState);
 
     const totalTime = performance.now() - startTime;
 
     // Send completion message with timing data
     self.postMessage({
       status: 'complete',
-      ruleset,
+      ruleset: { axiom, rules, iterations, angle },
       data: { totalTime }
     });
-  },
-
-  updateView({ panState }) {
-    if (!turtle) return;
-
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.strokeStyle = '#2c3e50';
-    turtle.draw(panState);
   }
-};
+
+  updateView(panState) {
+    if (!this.turtle) return;
+    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+    this.ctx.strokeStyle = '#2c3e50';
+    this.turtle.draw(panState);
+  }
+}
+
+const WORKER_METHODS = (() => {
+  const renderer = new Renderer();
+
+  let newPanState = null;
+  let newRuleset = null;
+
+  const processPendingOps = () => {
+    if (newRuleset) {
+      const { axiom, rules, iterations, angle } = newRuleset;
+      renderer.generate(axiom, rules, iterations, angle, newPanState);
+    } else if (newPanState) {
+      renderer.updateView(newPanState);
+    }
+
+    newPanState = null;
+    newRuleset = null;
+  };
+
+  // Public methods
+  return {
+    initCanvas(params) {
+      renderer.initCanvas(params.canvas);
+    },
+
+    resize(params) {
+      renderer.resize(params.width, params.height);
+      newPanState = { panX: 0, panY: 0, zoom: 1 };
+      setTimeout(processPendingOps, 0);
+    },
+
+    generate(params) {
+      newPanState = params.panState;
+      newRuleset = {
+        axiom: params.axiom,
+        rules: params.rules,
+        iterations: params.iterations,
+        angle: params.angle
+      };
+      setTimeout(processPendingOps, 0);
+    },
+
+    updateView(params) {
+      newPanState = params.panState;
+      setTimeout(processPendingOps, 0);
+    }
+  };
+})();
 
 self.onmessage = function (e) {
   const { method, params } = e.data;
-  const result = methods[method](params);
-  if (result) {
-    self.postMessage(result);
-  }
+  WORKER_METHODS[method](params);
 };
