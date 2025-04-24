@@ -11,13 +11,12 @@ class PanState {
 }
 
 class Canvas {
-  constructor(canvas, onWorkerMessage) {
+  constructor(canvas, onStatusMessage) {
     this._canvas = canvas;
-    this._onWorkerMessage = onWorkerMessage;
 
     this._worker = new Worker('js/renderer.worker.js');
     this._worker.onmessage = (e) => {
-      this._onWorkerMessage(e.data);
+      onStatusMessage(e.data);
     };
 
     // Create OffscreenCanvas once

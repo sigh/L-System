@@ -2,17 +2,23 @@ class PageHandler {
   constructor() {
     this._canvas = new Canvas(
       document.getElementById('canvas'),
-      (data) => this._handleWorkerMessage(data)
+      (data) => this._handleStatusMessage(data)
     );
     this._setupPresets();
     this._setupControls();
     this._loadFromUrl();
   }
 
-  _handleWorkerMessage(data) {
-    if (data.totalTime !== undefined) {
-      const timingElement = document.getElementById('timing');
-      timingElement.textContent = `Rendered in: ${Math.round(data.totalTime)} ms`;
+  _handleStatusMessage(data) {
+    const timingElement = document.getElementById('timing');
+
+    switch (data.status) {
+      case 'generating':
+        timingElement.textContent = 'Generating...';
+        break;
+      case 'complete':
+        timingElement.textContent = `Rendered in: ${Math.round(data.data.totalTime)} ms`;
+        break;
     }
   }
 

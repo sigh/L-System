@@ -171,6 +171,14 @@ const methods = {
   },
 
   generate({ axiom, rules, iterations, angle, panState }) {
+    const ruleset = { axiom, rules, iterations, angle };
+
+    // Send generation start message
+    self.postMessage({
+      status: 'generating',
+      ruleset
+    });
+
     const startTime = performance.now();
 
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -182,7 +190,13 @@ const methods = {
     turtle.draw(panState);
 
     const totalTime = performance.now() - startTime;
-    return { totalTime };
+
+    // Send completion message with timing data
+    self.postMessage({
+      status: 'complete',
+      ruleset,
+      data: { totalTime }
+    });
   },
 
   updateView({ panState }) {
