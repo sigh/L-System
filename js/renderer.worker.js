@@ -18,60 +18,13 @@ class RuleSet {
   }
 }
 
-class LSystem {
-  constructor(axiom, rules) {
-    this._ruleSet = new RuleSet(axiom, rules);
-  }
-
-  run(turtle, angle, iterations) {
-    const stack = [[this._ruleSet.axiom, iterations]];
-
-    while (stack.length > 0) {
-      const [current, remainingIterations] = stack.pop();
-
-      if (remainingIterations === 0) {
-        for (let char of current) {
-          switch (char) {
-            case 'F':
-              turtle.forward(1, true);
-              break;
-            case 'f':
-              turtle.forward(1, false);
-              break;
-            case '+':
-              turtle.rotate(angle);
-              break;
-            case '-':
-              turtle.rotate(-angle);
-              break;
-            case '[':
-              turtle.push();
-              break;
-            case ']':
-              turtle.pop();
-              break;
-          }
-        }
-      } else {
-        for (let i = current.length - 1; i >= 0; i--) {
-          const char = current[i];
-          const replacement = this._ruleSet.rules.get(char);
-          if (replacement) {
-            stack.push([replacement, remainingIterations - 1]);
-          } else {
-            stack.push([char, 0]);
-          }
-        }
-      }
-    }
-  }
-}
-
 class Turtle {
+  static INITIAL_ANGLE = -90;
+
   constructor() {
     this._x = 0;
     this._y = 0;
-    this._angle = -90;
+    this._angle = Turtle.INITIAL_ANGLE;
     this._stack = [];
     this._minX = -.1;
     this._minY = -.1;
@@ -99,6 +52,41 @@ class Turtle {
       maxX: this._maxX,
       maxY: this._maxY
     };
+  }
+
+  follow(otherTurtle) {
+    const currentX = this._x;
+    const currentY = this._y;
+    const currentAngle = this._angle;
+
+    // Create transformation matrix
+    const transform = new DOMMatrix()
+      .translate(currentX, currentY)
+      .rotate(currentAngle - Turtle.INITIAL_ANGLE);
+
+    // Apply path
+    this._path.addPath(otherTurtle.getPath(), transform);
+
+    // Calculate end position and angle
+    const endPoint = transform.transformPoint({
+      x: otherTurtle._x,
+      y: otherTurtle._y
+    });
+    this._x = endPoint.x;
+    this._y = endPoint.y;
+    this._angle = currentAngle + otherTurtle._angle - Turtle.INITIAL_ANGLE;
+
+    // Update bounds with transformed corners.
+    // We only need to check opposite corners because seeing each extreme
+    // once is enough.
+    const corners = [
+      { x: otherTurtle._minX, y: otherTurtle._minY },
+      { x: otherTurtle._maxX, y: otherTurtle._maxY },
+    ];
+    for (const corner of corners) {
+      const transformed = transform.transformPoint(corner);
+      this._updateBounds(transformed.x, transformed.y);
+    }
   }
 
   forward(length, draw = true) {
@@ -139,11 +127,125 @@ class Turtle {
   }
 }
 
+class LSystem {
+  constructor(axiom, rules) {
+    this._ruleSet = new RuleSet(axiom, rules);
+  }
+
+  /**
+   * Generates a turtle that follows the given instructions, using cached
+   * turtles for any rules encountered.
+   */
+  _generateTurtle(instructions, angle, ruleTurtles) {
+    const turtle = new Turtle();
+
+    for (const char of instructions) {
+      if (ruleTurtles.has(char)) {
+        // If this is a rule, use its cached path
+        turtle.follow(ruleTurtles.get(char));
+      } else {
+        // Handle non-rule characters
+        switch (char) {
+          case 'F':
+            turtle.forward(1, true);
+            break;
+          case 'f':
+            turtle.forward(1, false);
+            break;
+          case '+':
+            turtle.rotate(angle);
+            break;
+          case '-':
+            turtle.rotate(-angle);
+            break;
+          case '[':
+            turtle.push();
+            break;
+          case ']':
+            turtle.pop();
+            break;
+        }
+      }
+    }
+
+    return turtle;
+  }
+
+  /**
+   * Returns a Map where each key is an iteration number and each value is a Set
+   * of rules used in that iteration. This is used for the bottom-up approach
+   * where we generate paths for each rule at each iteration level.
+   */
+  _ruleUsagePerIteration(iterations) {
+    const ruleUsage = new Map();
+
+    // Initialize the map with empty sets for each iteration
+    for (let i = 0; i < iterations; i++) {
+      ruleUsage.set(i, new Set());
+    }
+
+    // Start with the axiom
+    let currentRules = ruleUsage.get(0);
+    for (const char of this._ruleSet.axiom) {
+      if (this._ruleSet.rules.has(char)) {
+        currentRules.add(char);
+      }
+    }
+
+    // For each iteration level
+    for (let iteration = 1; iteration < iterations; iteration++) {
+      const nextRules = ruleUsage.get(iteration);
+
+      // For each rule used in the previous iteration
+      for (const rule of currentRules) {
+        const replacement = this._ruleSet.rules.get(rule);
+        // Add any rules used in the replacement
+        for (const char of replacement) {
+          if (this._ruleSet.rules.has(char)) {
+            nextRules.add(char);
+          }
+        }
+      }
+
+      currentRules = nextRules;
+    }
+
+    return ruleUsage;
+  }
+
+  /**
+   * Generates the L-system using a bottom-up approach:
+   * 1. Start from the last iteration and work backwards
+   * 2. For each iteration, generate paths for all rules used in that iteration
+   * 3. Use the cached paths from the next iteration when generating paths
+   * 4. Finally, generate the path for the axiom using all cached paths
+   */
+  run(angle, iterations) {
+    const ruleUsage = this._ruleUsagePerIteration(iterations);
+    let previousRuleTurtles = new Map();
+
+    // Start from the last iteration and work backwards
+    for (let iteration = iterations - 1; iteration >= 0; iteration--) {
+      const nextRuleTurtles = new Map();
+
+      // For each rule used in this iteration
+      for (const rule of ruleUsage.get(iteration)) {
+        const ruleBody = this._ruleSet.rules.get(rule);
+        const turtle = this._generateTurtle(ruleBody, angle, previousRuleTurtles);
+        nextRuleTurtles.set(rule, turtle);
+      }
+
+      previousRuleTurtles = nextRuleTurtles;
+    }
+
+    return this._generateTurtle(this._ruleSet.axiom, angle, previousRuleTurtles);
+  }
+}
+
 class Renderer {
   constructor() {
     this.ctx = null;
     this.turtle = null;
-    this.lsystem = null;
   }
 
   initCanvas(canvas) {
@@ -192,9 +294,8 @@ class Renderer {
     this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     this.ctx.strokeStyle = '#2c3e50';
 
-    this.turtle = new Turtle();
-    this.lsystem = new LSystem(axiom, rules);
-    this.lsystem.run(this.turtle, angle, iterations);
+    const lsystem = new LSystem(axiom, rules);
+    this.turtle = lsystem.run(angle, iterations);
     this.draw(this.turtle.getPath(), this.turtle.getBounds(), panState);
 
     const totalTime = performance.now() - startTime;
