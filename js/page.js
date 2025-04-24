@@ -1,6 +1,6 @@
 class PageHandler {
   constructor() {
-    this._visualizer = new VisualizerProxy(
+    this._canvas = new Canvas(
       document.getElementById('canvas'),
       (data) => this._handleWorkerMessage(data)
     );
@@ -51,7 +51,7 @@ class PageHandler {
     document.getElementById('generate').addEventListener('click', () => {
       this._updateUrl();
       this._updatePresetField();
-      this._visualizer.generate(this._getLSystemParams(), /* resetPan = */ true);
+      this._canvas.generate(this._getLSystemParams(), /* resetPan = */ true);
     });
 
     // Add preset selection handler
@@ -60,7 +60,7 @@ class PageHandler {
       if (preset) {
         this._updateControlsFromPreset(preset);
         this._updateUrl();
-        this._visualizer.generate(this._getLSystemParams(), /* resetPan = */ true);
+        this._canvas.generate(this._getLSystemParams(), /* resetPan = */ true);
       }
     });
 
@@ -76,7 +76,7 @@ class PageHandler {
     ['iterations', 'angle'].forEach(id => {
       document.getElementById(id).addEventListener('change', () => {
         this._updateUrl();
-        this._visualizer.generate(this._getLSystemParams(), /* resetPan = */ false);
+        this._canvas.generate(this._getLSystemParams(), /* resetPan = */ false);
       });
     });
   }
@@ -88,13 +88,13 @@ class PageHandler {
     slider.addEventListener('input', () => {
       input.value = slider.value;
       this._updateUrl();
-      this._visualizer.generate(this._getLSystemParams(), /* resetPan = */ false);
+      this._canvas.generate(this._getLSystemParams(), /* resetPan = */ false);
     });
 
     input.addEventListener('change', () => {
       slider.value = input.value;
       this._updateUrl();
-      this._visualizer.generate(this._getLSystemParams(), /* resetPan = */ false);
+      this._canvas.generate(this._getLSystemParams(), /* resetPan = */ false);
     });
   }
 
@@ -138,13 +138,13 @@ class PageHandler {
 
     if (params.get('axiom')) {
       this._updatePresetField();
-      this._visualizer.generate(this._getLSystemParams(), /* resetPan = */ true);
+      this._canvas.generate(this._getLSystemParams(), /* resetPan = */ true);
     } else {
       // Use the first preset if no URL parameters
       const firstPreset = Object.values(LSystemPresets)[0];
       this._updateControlsFromPreset(firstPreset);
       this._updateUrl();
-      this._visualizer.generate(this._getLSystemParams(), /* resetPan = */ true);
+      this._canvas.generate(this._getLSystemParams(), /* resetPan = */ true);
     }
   }
 }

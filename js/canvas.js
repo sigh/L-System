@@ -10,7 +10,7 @@ class PanState {
   }
 }
 
-class VisualizerProxy {
+class Canvas {
   constructor(canvas, onWorkerMessage) {
     this._canvas = canvas;
     this._onWorkerMessage = onWorkerMessage;
