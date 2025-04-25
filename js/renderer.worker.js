@@ -132,10 +132,10 @@ class LSystem {
           case 'f':
             turtle.forward(1, false);
             break;
-          case '+':
+          case '-':
             turtle.rotate(angle);
             break;
-          case '-':
+          case '+':
             turtle.rotate(-angle);
             break;
           case '[':

@@ -36,8 +36,8 @@ The first character of the symbol are renderer instructions for these characters
 
 - `F` - Move forward while drawing a line
 - `f` - Move forward without drawing a line
-- `+` - Turn right by the specified angle
-- `-` - Turn left by the specified angle
+- `+` - Turn left by the specified angle
+- `-` - Turn right by the specified angle
 - `[` - Save the current position and angle
 - `]` - Restore the last saved position and angle
 
