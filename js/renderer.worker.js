@@ -223,23 +223,19 @@ class LSystem {
 }
 
 class Renderer {
-  constructor() {
-    this.ctx = null;
-    this.turtle = null;
-  }
-
-  initCanvas(canvas) {
-    this.ctx = canvas.getContext('2d');
+  constructor(canvas) {
+    this._ctx = canvas.getContext('2d');
+    this._turtle = null;
   }
 
   resize(width, height) {
-    this.ctx.canvas.width = parseInt(width);
-    this.ctx.canvas.height = parseInt(height);
+    this._ctx.canvas.width = parseInt(width);
+    this._ctx.canvas.height = parseInt(height);
   }
 
   clear() {
-    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
-    this.turtle = null;
+    this._ctx.clearRect(0, 0, this._ctx.canvas.width, this._ctx.canvas.height);
+    this._turtle = null;
   }
 
   draw(turtle, panState) {
@@ -248,26 +244,26 @@ class Renderer {
 
     // Calculate scale to fit canvas
     const padding = 10;
-    const scaleX = (this.ctx.canvas.width - 2 * padding) / Math.max(bounds.maxX - bounds.minX, 1);
-    const scaleY = (this.ctx.canvas.height - 2 * padding) / Math.max(bounds.maxY - bounds.minY, 1);
+    const scaleX = (this._ctx.canvas.width - 2 * padding) / Math.max(bounds.maxX - bounds.minX, 1);
+    const scaleY = (this._ctx.canvas.height - 2 * padding) / Math.max(bounds.maxY - bounds.minY, 1);
     const baseScale = Math.min(scaleX, scaleY);
 
     // Calculate translation to center the path after scaling
-    const translateX = (this.ctx.canvas.width / 2) - ((bounds.minX + bounds.maxX) / 2) * baseScale;
-    const translateY = (this.ctx.canvas.height / 2) - ((bounds.minY + bounds.maxY) / 2) * baseScale;
+    const translateX = (this._ctx.canvas.width / 2) - ((bounds.minX + bounds.maxX) / 2) * baseScale;
+    const translateY = (this._ctx.canvas.height / 2) - ((bounds.minY + bounds.maxY) / 2) * baseScale;
 
-    this.ctx.save();
+    this._ctx.save();
     // Apply user pan and zoom first
-    this.ctx.translate(panState.panX, panState.panY);
-    this.ctx.scale(panState.zoom, panState.zoom);
+    this._ctx.translate(panState.panX, panState.panY);
+    this._ctx.scale(panState.zoom, panState.zoom);
     // Apply turtle transformations last
-    this.ctx.translate(translateX, translateY);
-    this.ctx.scale(baseScale, baseScale);
+    this._ctx.translate(translateX, translateY);
+    this._ctx.scale(baseScale, baseScale);
     // Set line width based on zoom level
-    this.ctx.lineWidth = 1 / (baseScale * panState.zoom);
+    this._ctx.lineWidth = 1 / (baseScale * panState.zoom);
     // Draw the path
-    this.ctx.stroke(path);
-    this.ctx.restore();
+    this._ctx.stroke(path);
+    this._ctx.restore();
   }
 
   generate(ruleSet, iterations, angle, panState) {
@@ -279,12 +275,12 @@ class Renderer {
 
     const startTime = performance.now();
 
-    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
-    this.ctx.strokeStyle = '#2c3e50';
+    this._ctx.clearRect(0, 0, this._ctx.canvas.width, this._ctx.canvas.height);
+    this._ctx.strokeStyle = '#2c3e50';
 
     const lsystem = new LSystem(ruleSet);
-    this.turtle = lsystem.run(angle, iterations);
-    this.draw(this.turtle, panState);
+    this._turtle = lsystem.run(angle, iterations);
+    this.draw(this._turtle, panState);
 
     const totalTime = performance.now() - startTime;
 
@@ -297,20 +293,22 @@ class Renderer {
   }
 
   updateView(panState) {
-    if (!this.turtle) return;
-    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
-    this.ctx.strokeStyle = '#2c3e50';
-    this.draw(this.turtle, panState);
+    if (!this._turtle) return;
+    this._ctx.clearRect(0, 0, this._ctx.canvas.width, this._ctx.canvas.height);
+    this._ctx.strokeStyle = '#2c3e50';
+    this.draw(this._turtle, panState);
   }
 }
 
 const WORKER_METHODS = (() => {
-  const renderer = new Renderer();
+  let renderer = null;
 
   let newPanState = null;
   let newLSystemParams = null;
 
   const processPendingOps = () => {
+    if (!renderer) return;
+
     if (newLSystemParams) {
       const { ruleSet, iterations, angle } = newLSystemParams;
       renderer.generate(ruleSet, iterations, angle, newPanState);
@@ -325,10 +323,11 @@ const WORKER_METHODS = (() => {
   // Public methods
   return {
     initCanvas(params) {
-      renderer.initCanvas(params.canvas);
+      renderer = new Renderer(params.canvas);
     },
 
     resize(params) {
+      if (!renderer) return;
       renderer.resize(params.width, params.height);
       newPanState = { panX: 0, panY: 0, zoom: 1 };
       setTimeout(processPendingOps, 0);
@@ -350,6 +349,7 @@ const WORKER_METHODS = (() => {
     },
 
     clear() {
+      if (!renderer) return;
       newPanState = null;
       newLSystemParams = null;
       renderer.clear();
