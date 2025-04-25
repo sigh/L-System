@@ -11,8 +11,11 @@ class PanState {
 }
 
 class Canvas {
+  static MAX_SEGMENTS = 1e6; // 1 million segments
+
   constructor(canvas, onStatusMessage) {
     this._canvas = canvas;
+    this._onStatusMessage = onStatusMessage;
 
     this._worker = new Worker('js/renderer.worker.js');
     this._worker.onmessage = (e) => {
@@ -194,6 +197,21 @@ class Canvas {
   }
 
   generate({ ruleSet, iterations, angle }, resetPan = true) {
+    // Check if the line length would be too long.
+    // If so, clear the canvas and return.
+    const lineLength = ruleSet.calculateLineLength(iterations);
+    if (lineLength > Canvas.MAX_SEGMENTS) {
+      this._onStatusMessage({
+        status: 'error',
+        lSystemParams: { ruleSet, iterations, angle },
+        message: `Curve too long: ${lineLength} segments`
+      });
+      this._worker.postMessage({
+        method: 'clear'
+      });
+      return;
+    }
+
     // Reset pan state when generating new L-system
     if (resetPan) {
       this._panState.reset();

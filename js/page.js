@@ -25,6 +25,42 @@ class RuleSet {
     return rules;
   }
 
+  // Calculates the total length of the line for a given number of iterations.
+  // This is useful for performance optimization and auto-limiting iterations.
+  calculateLineLength(iterations) {
+    // Start with counts of symbols in the axiom
+    let counts = new Map();
+    for (const symbol of this.axiom) {
+      counts.set(symbol, (counts.get(symbol) || 0) + 1);
+    }
+
+    for (let i = 0; i < iterations; i++) {
+      const nextCounts = new Map();
+
+      for (const [symbol, count] of counts) {
+        const replacement = this.rules.get(symbol);
+        if (replacement) {
+          // If it's a rule, count each symbol in the replacement
+          for (const replacementSymbol of replacement) {
+            nextCounts.set(replacementSymbol,
+              (nextCounts.get(replacementSymbol) || 0) + count);
+          }
+        } else {
+          // If it's not a rule, keep its count
+          nextCounts.set(symbol,
+            (nextCounts.get(symbol) || 0) + count);
+        }
+      }
+
+      counts = nextCounts;
+    }
+
+    // Sum up the counts of all symbols that start with 'F'
+    return [...counts.entries()]
+      .filter(([symbol]) => symbol[0] === 'F')
+      .reduce((sum, [_, count]) => sum + count, 0);
+  }
+
   equals(other) {
     if (!(other instanceof RuleSet)) {
       return false;
@@ -65,9 +101,15 @@ class PageHandler {
     switch (data.status) {
       case 'generating':
         timingElement.textContent = 'Generating...';
+        timingElement.classList.remove('error');
         break;
       case 'complete':
         timingElement.textContent = `Rendered in: ${Math.round(data.data.totalTime)} ms`;
+        timingElement.classList.remove('error');
+        break;
+      case 'error':
+        timingElement.textContent = data.message;
+        timingElement.classList.add('error');
         break;
     }
   }

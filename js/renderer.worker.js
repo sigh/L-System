@@ -237,6 +237,11 @@ class Renderer {
     this.ctx.canvas.height = parseInt(height);
   }
 
+  clear() {
+    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+    this.turtle = null;
+  }
+
   draw(turtle, panState) {
     const path = turtle.getPath();
     const bounds = turtle.getBounds();
@@ -342,6 +347,12 @@ const WORKER_METHODS = (() => {
     updateView(params) {
       newPanState = params.panState;
       setTimeout(processPendingOps, 0);
+    },
+
+    clear() {
+      newPanState = null;
+      newLSystemParams = null;
+      renderer.clear();
     }
   };
 })();

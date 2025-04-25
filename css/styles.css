@@ -152,6 +152,12 @@ button:hover {
   flex-shrink: 0;
 }
 
+.timing-display.error {
+  color: #e74c3c;
+  border-color: #e74c3c;
+  background-color: #fdf3f2;
+}
+
 #canvas {
   background-color: white;
   border-radius: 8px;
