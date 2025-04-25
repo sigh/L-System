@@ -1,3 +1,41 @@
+class RuleSet {
+  constructor(axiom, rulesString) {
+    this.axiom = axiom;
+    this.rules = this._parseRules(rulesString);
+  }
+
+  _parseRules(rulesString) {
+    const rules = new Map();
+    const rulePairs = rulesString.split(/[;\n]/).filter(pair => pair.trim() !== '');
+    rulePairs.forEach(pair => {
+      const [key, value] = pair.split('=');
+      if (key && value) {
+        // Remove all whitespace from both key and value
+        rules.set(key.trim(), value.replace(/\s+/g, ''));
+      }
+    });
+    return rules;
+  }
+
+  equals(other) {
+    if (!(other instanceof RuleSet)) {
+      return false;
+    }
+    if (this.axiom !== other.axiom) {
+      return false;
+    }
+    if (this.rules.size !== other.rules.size) {
+      return false;
+    }
+    for (const [key, value] of this.rules) {
+      if (other.rules.get(key) !== value) {
+        return false;
+      }
+    }
+    return true;
+  }
+}
+
 class PageHandler {
   constructor() {
     this._canvas = new Canvas(
@@ -23,20 +61,24 @@ class PageHandler {
   }
 
   _getLSystemParams() {
+    const axiom = document.getElementById('axiom').value;
+    const rules = document.getElementById('rules').value;
+    const iterations = parseInt(document.getElementById('iterations').value);
+    const angle = parseFloat(document.getElementById('angle').value);
     return {
-      axiom: document.getElementById('axiom').value,
-      rules: document.getElementById('rules').value,
-      iterations: parseInt(document.getElementById('iterations').value),
-      angle: parseFloat(document.getElementById('angle').value)
+      ruleSet: new RuleSet(axiom, rules),
+      iterations,
+      angle
     };
   }
 
   _setupPresets() {
     const presetSelect = document.getElementById('preset');
-    Object.entries(LSystemPresets).forEach(([key, preset]) => {
+    Object.entries(L_SYSTEM_PRESETS).forEach(([key, preset]) => {
       const option = document.createElement('option');
       option.value = key;
       option.textContent = preset.name;
+      preset.ruleSet = new RuleSet(preset.axiom, preset.rules);
       presetSelect.appendChild(option);
     });
   }
@@ -55,34 +97,38 @@ class PageHandler {
     this._setupSliderControl('angle-slider', 'angle');
 
     document.getElementById('generate').addEventListener('click', () => {
-      this._updateUrl();
-      this._updatePresetField();
-      this._canvas.generate(this._getLSystemParams(), /* resetPan = */ true);
+      const params = this._getLSystemParams();
+      this._updateUrl(params);
+      this._updatePresetField(params);
+      this._canvas.generate(params, /* resetPan = */ true);
     });
 
     // Add preset selection handler
     document.getElementById('preset').addEventListener('change', (e) => {
-      const preset = LSystemPresets[e.target.value];
+      const preset = L_SYSTEM_PRESETS[e.target.value];
       if (preset) {
         this._updateControlsFromPreset(preset);
-        this._updateUrl();
-        this._canvas.generate(this._getLSystemParams(), /* resetPan = */ true);
+        const params = this._getLSystemParams();
+        this._updateUrl(params);
+        this._canvas.generate(params, /* resetPan = */ true);
       }
     });
 
     // Add input change handlers to update URL and preset field
     ['axiom', 'rules', 'angle'].forEach(id => {
       document.getElementById(id).addEventListener('change', () => {
-        this._updateUrl();
-        this._updatePresetField();
+        const params = this._getLSystemParams();
+        this._updateUrl(params);
+        this._updatePresetField(params);
       });
     });
 
     // Add input change handlers to update URL and regenerate without resetting pan
     ['iterations', 'angle'].forEach(id => {
       document.getElementById(id).addEventListener('change', () => {
-        this._updateUrl();
-        this._canvas.generate(this._getLSystemParams(), /* resetPan = */ false);
+        const params = this._getLSystemParams();
+        this._updateUrl(params);
+        this._canvas.generate(params, /* resetPan = */ false);
       });
     });
   }
@@ -93,65 +139,67 @@ class PageHandler {
 
     slider.addEventListener('input', () => {
       input.value = slider.value;
-      this._updateUrl();
-      this._canvas.generate(this._getLSystemParams(), /* resetPan = */ false);
+      const params = this._getLSystemParams();
+      this._updateUrl(params);
+      this._canvas.generate(params, /* resetPan = */ false);
     });
 
     input.addEventListener('change', () => {
       slider.value = input.value;
-      this._updateUrl();
-      this._canvas.generate(this._getLSystemParams(), /* resetPan = */ false);
+      const params = this._getLSystemParams();
+      this._updateUrl(params);
+      this._canvas.generate(params, /* resetPan = */ false);
     });
   }
 
-  _updateUrl() {
-    const params = new URLSearchParams();
-    const lsystemParams = this._getLSystemParams();
-    Object.entries(lsystemParams).forEach(([key, value]) => {
-      params.set(key, value);
-    });
+  _updateUrl(params) {
+    const urlParams = new URLSearchParams();
+    urlParams.set('axiom', params.ruleSet.axiom);
+    urlParams.set('rules', document.getElementById('rules').value);
+    urlParams.set('iterations', params.iterations);
+    urlParams.set('angle', params.angle);
 
-    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
     window.history.replaceState({}, '', newUrl);
   }
 
-  _updatePresetField() {
-    const { axiom, rules, angle } = this._getLSystemParams();
-    const matchingPreset = this._findMatchingPreset(axiom, rules, angle);
+  _updatePresetField(params) {
+    const matchingPreset = this._findMatchingPreset(params.ruleSet, params.angle);
     document.getElementById('preset').value = matchingPreset;
   }
 
-  _findMatchingPreset(axiom, rules, angle) {
-    return Object.entries(LSystemPresets).find(([_, preset]) =>
-      preset.axiom === axiom &&
-      preset.rules === rules &&
-      preset.angle === angle
+  _findMatchingPreset(ruleSet, angle) {
+    return Object.entries(L_SYSTEM_PRESETS).find(([_, preset]) =>
+      preset.angle === angle && preset.ruleSet.equals(ruleSet)
     )?.[0] || 'custom';
   }
 
   _loadFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    document.getElementById('axiom').value = params.get('axiom');
-    document.getElementById('rules').value = params.get('rules');
-    if (params.get('iterations')) {
-      document.getElementById('iterations').value = params.get('iterations');
-      document.getElementById('iterations-slider').value = params.get('iterations');
-    }
-    if (params.get('angle')) {
-      document.getElementById('angle').value = params.get('angle');
-      document.getElementById('angle-slider').value = params.get('angle');
+    const urlParams = new URLSearchParams(window.location.search);
+
+    if (!urlParams.get('axiom')) {
+      // Use the first preset if no axiom (hence invalid ruleset).
+      const preset = Object.values(L_SYSTEM_PRESETS)[0];
+      this._updateControlsFromPreset(preset);
+      this._updateUrl(preset);
+      this._canvas.generate(preset, /* resetPan = */ true);
+      return;
     }
 
-    if (params.get('axiom')) {
-      this._updatePresetField();
-      this._canvas.generate(this._getLSystemParams(), /* resetPan = */ true);
-    } else {
-      // Use the first preset if no URL parameters
-      const firstPreset = Object.values(LSystemPresets)[0];
-      this._updateControlsFromPreset(firstPreset);
-      this._updateUrl();
-      this._canvas.generate(this._getLSystemParams(), /* resetPan = */ true);
+    document.getElementById('axiom').value = urlParams.get('axiom');
+    document.getElementById('rules').value = urlParams.get('rules');
+    if (urlParams.get('iterations')) {
+      document.getElementById('iterations').value = urlParams.get('iterations');
+      document.getElementById('iterations-slider').value = urlParams.get('iterations');
     }
+    if (urlParams.get('angle')) {
+      document.getElementById('angle').value = urlParams.get('angle');
+      document.getElementById('angle-slider').value = urlParams.get('angle');
+    }
+
+    const params = this._getLSystemParams();
+    this._updatePresetField(params);
+    this._canvas.generate(params, /* resetPan = */ true);
   }
 }
 

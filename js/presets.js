@@ -1,4 +1,4 @@
-const LSystemPresets = {
+const L_SYSTEM_PRESETS = {
   hilbert: {
     name: "Hilbert Curve",
     axiom: "A",

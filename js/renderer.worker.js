@@ -1,23 +1,3 @@
-class RuleSet {
-  constructor(axiom, rulesString) {
-    this.axiom = axiom;
-    this.rules = this._parseRules(rulesString);
-  }
-
-  _parseRules(rulesString) {
-    const rules = new Map();
-    const rulePairs = rulesString.split(/[;\n]/).filter(pair => pair.trim() !== '');
-    rulePairs.forEach(pair => {
-      const [key, value] = pair.split('=');
-      if (key && value) {
-        // Remove all whitespace from both key and value
-        rules.set(key.trim(), value.replace(/\s+/g, ''));
-      }
-    });
-    return rules;
-  }
-}
-
 class Turtle {
   static INITIAL_ANGLE = -90;
 
@@ -128,8 +108,8 @@ class Turtle {
 }
 
 class LSystem {
-  constructor(axiom, rules) {
-    this._ruleSet = new RuleSet(axiom, rules);
+  constructor(ruleSet) {
+    this._ruleSet = ruleSet;
   }
 
   /**
@@ -282,11 +262,11 @@ class Renderer {
     this.ctx.restore();
   }
 
-  generate(axiom, rules, iterations, angle, panState) {
+  generate(ruleSet, iterations, angle, panState) {
     // Send generation start message
     self.postMessage({
       status: 'generating',
-      ruleset: { axiom, rules, iterations, angle }
+      lSystemParams: { ruleSet, iterations, angle },
     });
 
     const startTime = performance.now();
@@ -294,7 +274,7 @@ class Renderer {
     this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     this.ctx.strokeStyle = '#2c3e50';
 
-    const lsystem = new LSystem(axiom, rules);
+    const lsystem = new LSystem(ruleSet);
     this.turtle = lsystem.run(angle, iterations);
     this.draw(this.turtle.getPath(), this.turtle.getBounds(), panState);
 
@@ -303,7 +283,7 @@ class Renderer {
     // Send completion message with timing data
     self.postMessage({
       status: 'complete',
-      ruleset: { axiom, rules, iterations, angle },
+      lSystemParams: { ruleSet, iterations, angle },
       data: { totalTime }
     });
   }
@@ -320,18 +300,18 @@ const WORKER_METHODS = (() => {
   const renderer = new Renderer();
 
   let newPanState = null;
-  let newRuleset = null;
+  let newLSystemParams = null;
 
   const processPendingOps = () => {
-    if (newRuleset) {
-      const { axiom, rules, iterations, angle } = newRuleset;
-      renderer.generate(axiom, rules, iterations, angle, newPanState);
+    if (newLSystemParams) {
+      const { ruleSet, iterations, angle } = newLSystemParams;
+      renderer.generate(ruleSet, iterations, angle, newPanState);
     } else if (newPanState) {
       renderer.updateView(newPanState);
     }
 
     newPanState = null;
-    newRuleset = null;
+    newLSystemParams = null;
   };
 
   // Public methods
@@ -348,9 +328,8 @@ const WORKER_METHODS = (() => {
 
     generate(params) {
       newPanState = params.panState;
-      newRuleset = {
-        axiom: params.axiom,
-        rules: params.rules,
+      newLSystemParams = {
+        ruleSet: params.ruleSet,
         iterations: params.iterations,
         angle: params.angle
       };

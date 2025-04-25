@@ -137,7 +137,7 @@ class Canvas {
     });
   }
 
-  generate({ axiom, rules, iterations, angle }, resetPan = true) {
+  generate({ ruleSet, iterations, angle }, resetPan = true) {
     // Reset pan state when generating new L-system
     if (resetPan) {
       this._panState.reset();
@@ -146,8 +146,7 @@ class Canvas {
     this._worker.postMessage({
       method: 'generate',
       params: {
-        axiom,
-        rules,
+        ruleSet,
         iterations,
         angle,
         panState: this._panState
