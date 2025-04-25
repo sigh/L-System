@@ -6,10 +6,10 @@ class Turtle {
     this._y = 0;
     this._angle = Turtle.INITIAL_ANGLE;
     this._stack = [];
-    this._minX = -.1;
-    this._minY = -.1;
-    this._maxX = .1;
-    this._maxY = .1;
+    this._minX = 0;
+    this._minY = 0;
+    this._maxX = 0;
+    this._maxY = 0;
     this._path = new Path2D();
     this._path.moveTo(this._x, this._y);
   }
@@ -57,11 +57,11 @@ class Turtle {
     this._angle = currentAngle + otherTurtle._angle - Turtle.INITIAL_ANGLE;
 
     // Update bounds with transformed corners.
-    // We only need to check opposite corners because seeing each extreme
-    // once is enough.
     const corners = [
       { x: otherTurtle._minX, y: otherTurtle._minY },
       { x: otherTurtle._maxX, y: otherTurtle._maxY },
+      { x: otherTurtle._minX, y: otherTurtle._maxY },
+      { x: otherTurtle._maxX, y: otherTurtle._minY },
     ];
     for (const corner of corners) {
       const transformed = transform.transformPoint(corner);
@@ -237,11 +237,14 @@ class Renderer {
     this.ctx.canvas.height = parseInt(height);
   }
 
-  draw(path, bounds, panState) {
+  draw(turtle, panState) {
+    const path = turtle.getPath();
+    const bounds = turtle.getBounds();
+
     // Calculate scale to fit canvas
-    const padding = 20;
-    const scaleX = (this.ctx.canvas.width - 2 * padding) / (bounds.maxX - bounds.minX);
-    const scaleY = (this.ctx.canvas.height - 2 * padding) / (bounds.maxY - bounds.minY);
+    const padding = 10;
+    const scaleX = (this.ctx.canvas.width - 2 * padding) / Math.max(bounds.maxX - bounds.minX, 1);
+    const scaleY = (this.ctx.canvas.height - 2 * padding) / Math.max(bounds.maxY - bounds.minY, 1);
     const baseScale = Math.min(scaleX, scaleY);
 
     // Calculate translation to center the path after scaling
@@ -276,7 +279,7 @@ class Renderer {
 
     const lsystem = new LSystem(ruleSet);
     this.turtle = lsystem.run(angle, iterations);
-    this.draw(this.turtle.getPath(), this.turtle.getBounds(), panState);
+    this.draw(this.turtle, panState);
 
     const totalTime = performance.now() - startTime;
 
@@ -292,7 +295,7 @@ class Renderer {
     if (!this.turtle) return;
     this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     this.ctx.strokeStyle = '#2c3e50';
-    this.draw(this.turtle.getPath(), this.turtle.getBounds(), panState);
+    this.draw(this.turtle, panState);
   }
 }
 
