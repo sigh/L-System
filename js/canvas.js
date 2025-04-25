@@ -196,19 +196,30 @@ class Canvas {
     });
   }
 
-  generate({ ruleSet, iterations, angle }, resetPan = true) {
-    // Check if the line length would be too long.
-    // If so, clear the canvas and return.
+  _handleError(message, lSystemParams) {
+    this._onStatusMessage({
+      status: 'error',
+      lSystemParams,
+      message
+    });
+    this._worker.postMessage({
+      method: 'clear'
+    });
+  }
+
+  generate(lSystemParams, resetPan = true) {
+    const { ruleSet, iterations, angle } = lSystemParams;
+
+    // Validate iterations
+    if (iterations < 1 || !Number.isInteger(iterations)) {
+      this._handleError('Iteration count is invalid', lSystemParams);
+      return;
+    }
+
+    // Check if the line length would be too long
     const lineLength = ruleSet.calculateLineLength(iterations);
     if (lineLength > Canvas.MAX_SEGMENTS) {
-      this._onStatusMessage({
-        status: 'error',
-        lSystemParams: { ruleSet, iterations, angle },
-        message: `Curve too long: ${lineLength} segments`
-      });
-      this._worker.postMessage({
-        method: 'clear'
-      });
+      this._handleError(`Curve too long: ${lineLength} steps`, lSystemParams);
       return;
     }
 

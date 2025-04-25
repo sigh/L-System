@@ -117,7 +117,7 @@ class PageHandler {
   _getLSystemParams() {
     const axiom = document.getElementById('axiom').value;
     const rules = document.getElementById('rules').value;
-    const iterations = parseInt(document.getElementById('iterations').value);
+    const iterations = parseFloat(document.getElementById('iterations').value);
     const angle = parseFloat(document.getElementById('angle').value);
     return {
       ruleSet: new RuleSet(axiom, rules),
