@@ -119,13 +119,13 @@ class LSystem {
   _generateTurtle(instructions, angle, ruleTurtles) {
     const turtle = new Turtle();
 
-    for (const char of instructions) {
-      if (ruleTurtles.has(char)) {
+    for (const symbol of instructions) {
+      if (ruleTurtles.has(symbol)) {
         // If this is a rule, use its cached path
-        turtle.follow(ruleTurtles.get(char));
+        turtle.follow(ruleTurtles.get(symbol));
       } else {
-        // Handle non-rule characters
-        switch (char) {
+        // Handle instruction symbols
+        switch (symbol[0]) {
           case 'F':
             turtle.forward(1, true);
             break;
@@ -166,9 +166,9 @@ class LSystem {
 
     // Start with the axiom
     let currentRules = ruleUsage.get(0);
-    for (const char of this._ruleSet.axiom) {
-      if (this._ruleSet.rules.has(char)) {
-        currentRules.add(char);
+    for (const symbol of this._ruleSet.axiom) {
+      if (this._ruleSet.rules.has(symbol)) {
+        currentRules.add(symbol);
       }
     }
 
@@ -180,9 +180,9 @@ class LSystem {
       for (const rule of currentRules) {
         const replacement = this._ruleSet.rules.get(rule);
         // Add any rules used in the replacement
-        for (const char of replacement) {
-          if (this._ruleSet.rules.has(char)) {
-            nextRules.add(char);
+        for (const symbol of replacement) {
+          if (this._ruleSet.rules.has(symbol)) {
+            nextRules.add(symbol);
           }
         }
       }

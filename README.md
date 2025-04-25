@@ -21,7 +21,18 @@ L-Systems use two main components to generate patterns:
      X=F[-X][X]F[-X]+FX
      ```
 
-Special symbols:
+### Symbol format
+
+Symbols are formatted as follows:
+
+- A non-digit character followed by any number of digits
+- Whitespace is ignored
+- Examples:
+  - `F` - a basic symbol
+  - `F1` - a numbered variant
+  - `G42` - a variant with multiple digits
+
+The first character of the symbol are renderer instructions for these characters:
 
 - `F` - Move forward while drawing a line
 - `f` - Move forward without drawing a line

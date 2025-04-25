@@ -54,5 +54,13 @@ const L_SYSTEM_PRESETS = {
     rules: "F=FF+F++F+F",
     iterations: 6,
     angle: 90
+  },
+  gosper: {
+    name: "Gosper Curve",
+    src: "ABOP Figure 1.11a",
+    axiom: "F1",
+    rules: "F1=F1+F2++F2-F1--F1F1-F2+\nF2=-F1+F2F2++F2+F1--F1-F2",
+    iterations: 4,
+    angle: 60
   }
 };

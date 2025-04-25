@@ -1,7 +1,13 @@
 class RuleSet {
+  static SYMBOL_REGEX = /[^\d\s]\d*/g;
+
   constructor(axiom, rulesString) {
-    this.axiom = axiom;
+    this.axiom = this._parseSymbols(axiom);
     this.rules = this._parseRules(rulesString);
+  }
+
+  _parseSymbols(str) {
+    return [...str.matchAll(RuleSet.SYMBOL_REGEX)].map(match => match[0]);
   }
 
   _parseRules(rulesString) {
@@ -11,7 +17,9 @@ class RuleSet {
       const [key, value] = pair.split('=');
       if (key && value) {
         // Remove all whitespace from both key and value
-        rules.set(key.trim(), value.replace(/\s+/g, ''));
+        const symbol = key.trim();
+        const replacement = this._parseSymbols(value.replace(/\s+/g, ''));
+        rules.set(symbol, replacement);
       }
     });
     return rules;
@@ -21,14 +29,18 @@ class RuleSet {
     if (!(other instanceof RuleSet)) {
       return false;
     }
-    if (this.axiom !== other.axiom) {
+    if (this.axiom.length !== other.axiom.length) {
+      return false;
+    }
+    if (!arraysAreEqual(this.axiom, other.axiom)) {
       return false;
     }
     if (this.rules.size !== other.rules.size) {
       return false;
     }
     for (const [key, value] of this.rules) {
-      if (other.rules.get(key) !== value) {
+      const otherValue = other.rules.get(key);
+      if (!otherValue || !arraysAreEqual(value, otherValue)) {
         return false;
       }
     }
@@ -154,7 +166,7 @@ class PageHandler {
 
   _updateUrl(params) {
     const urlParams = new URLSearchParams();
-    urlParams.set('axiom', params.ruleSet.axiom);
+    urlParams.set('axiom', params.ruleSet.axiom.join(''));
     urlParams.set('rules', document.getElementById('rules').value);
     urlParams.set('iterations', params.iterations);
     urlParams.set('angle', params.angle);
